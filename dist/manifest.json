@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Development Companion",
+  "version": "1.6.6",
+  "description": "反向解密前端站点网关加密内容，解密后的内容将显示在开发者工具中",
+  "icons": {
+    "16": "icons/icon.png",
+    "19": "icons/icon.png",
+    "38": "icons/icon.png",
+    "48": "icons/icon.png",
+    "128": "icons/icon.png"
+  },
+  "action": {
+    "default_icon": "icons/icon.png",
+    "default_popup": "popup/index.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  },
+  "devtools_page": "devtoolsPage/devtools.html",
+  "permissions": [
+    "tabs",
+    "downloads",
+    "debugger",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ]
+}
