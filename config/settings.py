@@ -19,3 +19,6 @@ GATEWAY_IV = "HJhVhS+drenvWfY7Mvalew=="
 
 # Default query params
 DEFAULT_PLATFORM = "MyEhi"
+
+# 模块过滤（空列表=全部测试，非空=只测试指定模块）
+TEST_MODULES = ["Complaint"]

@@ -1,0 +1,32 @@
+trigger:
+  - none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.11'
+      addToPath: true
+
+  - script: pip install -r requirements.txt
+    displayName: 'Install dependencies'
+
+  - script: pytest tests/test_smoke.py --alluredir=allure-results
+    displayName: 'Run smoke tests'
+    env:
+      TEST_USERNAME: $(testUsername)
+      TEST_PASSWORD: $(testPassword)
+
+  - task: AllureGenerate@1
+    inputs:
+      resultsDir: 'allure-results'
+      targetDir: 'allure-report'
+    condition: always()
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathToPublish: 'allure-report'
+      artifactName: 'allure-report'
+    condition: always()
