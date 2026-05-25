@@ -1,0 +1,6 @@
+pytest==8.3.4
+requests==2.34.2
+allure-pytest==2.13.5
+Faker==37.1.0
+pycryptodome==3.21.0
+urllib3==2.7.0
