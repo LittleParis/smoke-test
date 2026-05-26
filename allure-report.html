@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smoke Test Report</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        h1 { color: #2c3e50; margin-bottom: 20px; }
+
+        /* 统计卡片 */
+        .stats { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+        .stat-card { background: white; border-radius: 8px; padding: 20px; min-width: 120px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .stat-card h3 { font-size: 12px; color: #666; text-transform: uppercase; margin-bottom: 5px; }
+        .stat-card .value { font-size: 28px; font-weight: bold; }
+        .stat-card.passed .value { color: #28a745; }
+        .stat-card.failed .value { color: #dc3545; }
+        .stat-card.broken .value { color: #fd7e14; }
+        .stat-card.skipped .value { color: #6c757d; }
+        .stat-card.total .value { color: #2c3e50; }
+
+        /* 筛选 */
+        .filters { background: white; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+        .filters label { font-size: 14px; color: #666; }
+        .filters select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; cursor: pointer; }
+        .filters button { padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .filters button:hover { background: #0056b3; }
+
+        /* 表格 */
+        .results-table { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #343a40; color: white; padding: 12px 15px; text-align: left; font-size: 13px; text-transform: uppercase; }
+        td { padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 14px; vertical-align: top; }
+        tr:hover { background: #f8f9fa; }
+        tr.hidden { display: none; }
+
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; color: white; }
+        .status-passed { background: #28a745; }
+        .status-failed { background: #dc3545; }
+        .status-broken { background: #fd7e14; }
+        .status-skipped { background: #6c757d; }
+
+        .feature-badge { display: inline-block; padding: 3px 8px; background: #e9ecef; border-radius: 4px; font-size: 12px; color: #495057; }
+        .story-badge { display: inline-block; padding: 3px 8px; background: #fff3cd; border-radius: 4px; font-size: 12px; color: #856404; }
+
+        .name-cell { max-width: 300px; word-break: break-word; }
+        .error-cell { max-width: 400px; font-family: monospace; font-size: 12px; color: #dc3545; word-break: break-word; }
+
+        /* 详情展开 */
+        .details-toggle { background: none; border: none; color: #007bff; cursor: pointer; font-size: 13px; padding: 5px 0; }
+        .details-toggle:hover { text-decoration: underline; }
+        .details-content { display: none; margin-top: 10px; background: #f8f9fa; border-radius: 4px; padding: 12px; }
+        .details-content.show { display: block; }
+        .details-content pre { white-space: pre-wrap; word-break: break-word; margin: 8px 0; font-size: 12px; }
+        .details-content .label { font-weight: bold; color: #495057; margin-bottom: 4px; }
+
+        /* 运行信息 */
+        .run-info { background: white; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 14px; color: #666; }
+        .run-info span { margin-right: 20px; }
+
+        /* 按模块统计 */
+        .feature-stats { background: white; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .feature-stats h3 { margin-bottom: 10px; font-size: 14px; color: #333; }
+        .feature-stats table { font-size: 13px; }
+        .feature-stats th { background: #f8f9fa; color: #333; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Smoke Test Report</h1>
+
+        <div class="run-info">
+            <span>📅 时间: 2026-05-25 17:10:29</span>
+            <span>⏱️ 总耗时: 8.42m</span>
+            <span>📊 测试数: 49</span>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card total">
+                <h3>Total</h3>
+                <div class="value">49</div>
+            </div>
+            <div class="stat-card passed">
+                <h3>Passed</h3>
+                <div class="value">22</div>
+            </div>
+            <div class="stat-card failed">
+                <h3>Failed</h3>
+                <div class="value">27</div>
+            </div>
+            <div class="stat-card broken">
+                <h3>Broken</h3>
+                <div class="value">0</div>
+            </div>
+            <div class="stat-card skipped">
+                <h3>Skipped</h3>
+                <div class="value">0</div>
+            </div>
+        </div>
+
+        <div class="feature-stats">
+            <h3>按模块统计</h3>
+            <table>
+                <thead>
+                    <tr><th>模块</th><th>通过</th><th>失败</th><th>异常</th><th>跳过</th><th>总计</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Complaint</td>
+                        <td style="color:#28a745">22</td>
+                        <td style="color:#dc3545">27</td>
+                        <td style="color:#fd7e14">0</td>
+                        <td style="color:#6c757d">0</td>
+                        <td>49</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="filters">
+            <label>状态筛选:</label>
+            <select id="statusFilter">
+                <option value="all">全部</option>
+                <option value="passed">✅ 通过</option>
+                <option value="failed">❌ 失败</option>
+                <option value="broken">💔 异常</option>
+                <option value="skipped">⏭️ 跳过</option>
+            </select>
+            <label>模块筛选:</label>
+            <select id="featureFilter">
+                <option value="all">全部</option>
+                <option value="Complaint">Complaint</option>
+            </select>
+            <button onclick="resetFilters()">重置</button>
+        </div>
+
+        <div class="results-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>状态</th>
+                        <th>测试名称</th>
+                        <th>模块</th>
+                        <th>类型</th>
+                        <th>耗时</th>
+                        <th>错误信息</th>
+                        <th>详情</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">客诉记录查询-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>334ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-0')">展开</button>
+                            <div id="details-0" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "MaxResultCount": 10,
+  "SkipCount": 0,
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>无</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">客诉记录导出Excel-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>1.07s</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-1')">展开</button>
+                            <div id="details-1" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "MaxResultCount": 10,
+  "SkipCount": 0,
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": {
+    "fileUrl": "https://externalimage.demo.ehi.com.cn/1231/fcbb4f4c2a1f4fa3a1f80b96bce846bc.xlsx",
+    "fileName": "客诉记录导出"
+  },
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "6da9887293c85ab0739957f04164c70b"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">配置客诉三级审核人-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">update</span></td>
+                        <td>50ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-2')">展开</button>
+                            <div id="details-2" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "客诉审核流不存在！",
+  "errorCode": 2147483647,
+  "operationId": "b46d3cd1de18a6a57c0896c896ddb87f"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">获取客诉三级审核人-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>242ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-3')">展开</button>
+                            <div id="details-3" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": {
+    "reviewUser": {
+      "userCode": "38844",
+      "userName": "张周浩",
+      "certTypeName": "身份证",
+      "certCode": "410323199912189597",
+      "phone": "15896603248",
+      "status": "Y",
+      "quit": false,
+      "email": "zhouhao.zhang@1hai.cn"
+    },
+    "firstVerifyUser": [
+      {
+        "userCode": "11968",
+        "userName": "黄珍",
+        "certTypeName": "身份证",
+        "certCode": "362524198404267026",
+        "phone": "15021047316",
+        "status": "Y",
+        "quit": false,
+        "email": "zhen.huang@1hai.cn"
+      }
+    ],
+    "secondVerifyUser": [
+      {
+        "userCode": "10007",
+        "userName": "郑凤娟",
+        "certTypeName": "身份证",
+        "certCode": "342426198212143823",
+        "phone": "18621695773",
+        "status": "Y",
+        "quit": false,
+        "email": "jane.zheng@1hai.cn"
+      }
+    ]
+  },
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "5f1366296f50b7b471bf114e39d48656"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">获取客诉三级审核人-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>121ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-4')">展开</button>
+                            <div id="details-4" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": {
+    "reviewUser": {
+      "userCode": "38844",
+      "userName": "张周浩",
+      "certTypeName": "身份证",
+      "certCode": "410323199912189597",
+      "phone": "15896603248",
+      "status": "Y",
+      "quit": false,
+      "email": "zhouhao.zhang@1hai.cn"
+    },
+    "firstVerifyUser": [
+      {
+        "userCode": "11968",
+        "userName": "黄珍",
+        "certTypeName": "身份证",
+        "certCode": "362524198404267026",
+        "phone": "15021047316",
+        "status": "Y",
+        "quit": false,
+        "email": "zhen.huang@1hai.cn"
+      }
+    ],
+    "secondVerifyUser": [
+      {
+        "userCode": "10007",
+        "userName": "郑凤娟",
+        "certTypeName": "身份证",
+        "certCode": "342426198212143823",
+        "phone": "18621695773",
+        "status": "Y",
+        "quit": false,
+        "email": "jane.zheng@1hai.cn"
+      }
+    ]
+  },
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "d5b258d48ff3bb9ef415bf5e3b2e1aeb"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">取消客诉-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">delete</span></td>
+                        <td>259ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-5')">展开</button>
+                            <div id="details-5" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "没有此条记录",
+  "errorCode": 2147483647,
+  "operationId": "20a7ed89182a59604653fce087e347bc"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">配置客诉三级审核人-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">update</span></td>
+                        <td>68ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-6')">展开</button>
+                            <div id="details-6" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "客诉审核流不存在！",
+  "errorCode": 2147483647,
+  "operationId": "41d71ae93a6ebbde5d8194af6944e2d3"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">根据订单号加载客诉信息上所需的订单信息-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>30ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-7')">展开</button>
+                            <div id="details-7" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "订单号为的订单不存在！",
+  "errorCode": 2147483647,
+  "operationId": "0fda0e355f7d319f417acdf4e3f4a483"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">获取客诉审核记录日志-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>115ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-8')">展开</button>
+                            <div id="details-8" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "没有此条记录",
+  "errorCode": 2147483647,
+  "operationId": "3e6e7b8ca82d9d32218b85f4315428d5"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">获取客户一年的订单量-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>217ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-9')">展开</button>
+                            <div id="details-9" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": {
+    "entzjOrderCount": 0,
+    "blockOrderCount": 0,
+    "userOrderCount": 0
+  },
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "053695222b318f2bb2d476172d7c17f5"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">登记客诉-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">create</span></td>
+                        <td>43ms</td>
+                        <td class="error-cell">AssertionError: assert 500 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-10')">展开</button>
+                            <div id="details-10" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>无</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">客诉记录查询-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>290ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-11')">展开</button>
+                            <div id="details-11" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "MaxResultCount": 10,
+  "SkipCount": 0,
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>无</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">完成客诉-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>412ms</td>
+                        <td class="error-cell">AssertionError: assert 415 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-12')">展开</button>
+                            <div id="details-12" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "{\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.16\",\"title\":\"Unsupported Media Type\",\"status\":415,\"traceId\":\"00-b458d9963542eed1f0920f9bc47e48b3-b274719cd7bcec21-01\"}",
+  "errorCode": 2147483647,
+  "operationId": "b458d9963542eed1f0920f9bc47e48b3"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">获取客诉详情-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>48ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-13')">展开</button>
+                            <div id="details-13" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "没有此条记录",
+  "errorCode": 2147483647,
+  "operationId": "7326485a44c9c604fd27bd34fc0f6ed5"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">配置客诉三级审核人-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">update</span></td>
+                        <td>49ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-14')">展开</button>
+                            <div id="details-14" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "客诉审核流不存在！",
+  "errorCode": 2147483647,
+  "operationId": "8ff0612d95ced8595ba3865e274fc5a1"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">根据订单号加载客诉信息上所需的订单信息-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>70ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-15')">展开</button>
+                            <div id="details-15" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "订单号为的订单不存在！",
+  "errorCode": 2147483647,
+  "operationId": "faf5e12e13a674651ca60f23e61b5ceb"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">完成客诉-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>155ms</td>
+                        <td class="error-cell">AssertionError: assert 415 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-16')">展开</button>
+                            <div id="details-16" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "{\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.16\",\"title\":\"Unsupported Media Type\",\"status\":415,\"traceId\":\"00-587df4f4cf7cde1ca65e1ffbc7f17fc0-05b1a0db22e6f256-01\"}",
+  "errorCode": 2147483647,
+  "operationId": "587df4f4cf7cde1ca65e1ffbc7f17fc0"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">添加/修改投诉类型（id为0时，则为新增投诉类型）-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">create</span></td>
+                        <td>85ms</td>
+                        <td class="error-cell">AssertionError: assert 289 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-17')">展开</button>
+                            <div id="details-17" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "validationErrors": [
+    {
+      "memberNames": [
+        "$.isSendEmail"
+      ],
+      "errorMessage": "The JSON value could not be converted to System.Boolean. Path: $.isSendEmail | LineNumber: 0 | BytePositionInLine: 71."
+    },
+    {
+      "memberNames": [
+        "input"
+      ],
+      "errorMessage": "input is null!"
+    }
+  ],
+  "trace": null,
+  "result": null,
+  "isSuccess": false,
+  "errorCode": 2147483647,
+  "message": "Method arguments are not valid! See ValidationErrors for details.",
+  "operationId": "1676bad9c3515d6ab80916ac45f1177d"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">客诉管理-客诉审核-查询-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>120ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-18')">展开</button>
+                            <div id="details-18" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "MaxResultCount": 10,
+  "SkipCount": 0,
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>无</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">删除投诉类型-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">delete</span></td>
+                        <td>48ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-19')">展开</button>
+                            <div id="details-19" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": false,
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "079a0083e1d53d8a4e6b783dfe9afc26"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">取消客诉-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">delete</span></td>
+                        <td>3.10s</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-20')">展开</button>
+                            <div id="details-20" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "没有此条记录",
+  "errorCode": 2147483647,
+  "operationId": "638b0553da8df216d3cab2f58cfd7733"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">获取客诉审核记录日志-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>184ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-21')">展开</button>
+                            <div id="details-21" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "没有此条记录",
+  "errorCode": 2147483647,
+  "operationId": "5bd9ceefab5d62b2265399430fc458b5"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">添加/修改投诉类型（id为0时，则为新增投诉类型）-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">create</span></td>
+                        <td>110ms</td>
+                        <td class="error-cell">AssertionError: assert 289 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-22')">展开</button>
+                            <div id="details-22" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "validationErrors": [
+    {
+      "memberNames": [
+        "$.isSendEmail"
+      ],
+      "errorMessage": "The JSON value could not be converted to System.Boolean. Path: $.isSendEmail | LineNumber: 0 | BytePositionInLine: 69."
+    },
+    {
+      "memberNames": [
+        "input"
+      ],
+      "errorMessage": "input is null!"
+    }
+  ],
+  "trace": null,
+  "result": null,
+  "isSuccess": false,
+  "errorCode": 2147483647,
+  "message": "Method arguments are not valid! See ValidationErrors for details.",
+  "operationId": "c417fe7033f195792f8bc116bb89dbbb"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">登记客诉-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">create</span></td>
+                        <td>129ms</td>
+                        <td class="error-cell">AssertionError: assert 289 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-23')">展开</button>
+                            <div id="details-23" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "validationErrors": [
+    {
+      "memberNames": [
+        "$.files"
+      ],
+      "errorMessage": "The JSON value could not be converted to System.Collections.Generic.List`1[Corp.AfterSale.Core.CoreBusiness.Accident.Dto.PostAttachDto]. Path: $.files | LineNumber: 0 | BytePositionInLine: 359."
+    },
+    {
+      "memberNames": [
+        "input"
+      ],
+      "errorMessage": "input is null!"
+    }
+  ],
+  "trace": null,
+  "result": null,
+  "isSuccess": false,
+  "errorCode": 2147483647,
+  "message": "Method arguments are not valid! See ValidationErrors for details.",
+  "operationId": "1b8a112d93fc206c84127595add32733"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">获取客诉详情-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>408ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-24')">展开</button>
+                            <div id="details-24" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "没有此条记录",
+  "errorCode": 2147483647,
+  "operationId": "ef25c824967feb4d3dc809896f0120e2"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">获取客诉类型-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>27ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-25')">展开</button>
+                            <div id="details-25" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": [
+    {
+      "id": 1,
+      "complaintName": "事故",
+      "email": "shigu.qy@1hai.cn",
+      "isSendEmail": true
+    },
+    {
+      "id": 2,
+      "complaintName": "保养",
+      "email": "baoyang.qy@1hai.cn",
+      "isSendEmail": true
+    },
+    {
+      "id": 3,
+      "complaintName": "客服态度",
+      "email": "",
+      "isSendEmail": false
+    },
+    {
+      "id": 4,
+      "complaintName": "门店员工态度",
+      "email": "",
+      "isSendEmail": false
+    },
+    {
+      "id": 5,
+      "complaintName": "修理厂员工态度",
+      "email": "",
+      "isSendEmail": false
+    }
+  ],
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "73e3d786ed5f7e208484f78888242af0"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">添加/修改投诉类型（id为0时，则为新增投诉类型）-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">create</span></td>
+                        <td>69ms</td>
+                        <td class="error-cell">AssertionError: assert 289 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-26')">展开</button>
+                            <div id="details-26" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "validationErrors": [
+    {
+      "memberNames": [
+        "$.isSendEmail"
+      ],
+      "errorMessage": "The JSON value could not be converted to System.Boolean. Path: $.isSendEmail | LineNumber: 0 | BytePositionInLine: 71."
+    },
+    {
+      "memberNames": [
+        "input"
+      ],
+      "errorMessage": "input is null!"
+    }
+  ],
+  "trace": null,
+  "result": null,
+  "isSuccess": false,
+  "errorCode": 2147483647,
+  "message": "Method arguments are not valid! See ValidationErrors for details.",
+  "operationId": "b61b02bf18a4c2ba988d3eab84f3912d"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">获取客诉三级审核人-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>258ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-27')">展开</button>
+                            <div id="details-27" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": {
+    "reviewUser": {
+      "userCode": "38844",
+      "userName": "张周浩",
+      "certTypeName": "身份证",
+      "certCode": "410323199912189597",
+      "phone": "15896603248",
+      "status": "Y",
+      "quit": false,
+      "email": "zhouhao.zhang@1hai.cn"
+    },
+    "firstVerifyUser": [
+      {
+        "userCode": "11968",
+        "userName": "黄珍",
+        "certTypeName": "身份证",
+        "certCode": "362524198404267026",
+        "phone": "15021047316",
+        "status": "Y",
+        "quit": false,
+        "email": "zhen.huang@1hai.cn"
+      }
+    ],
+    "secondVerifyUser": [
+      {
+        "userCode": "10007",
+        "userName": "郑凤娟",
+        "certTypeName": "身份证",
+        "certCode": "342426198212143823",
+        "phone": "18621695773",
+        "status": "Y",
+        "quit": false,
+        "email": "jane.zheng@1hai.cn"
+      }
+    ]
+  },
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "91f13cb5c75474599d986fff2d7002c9"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">添加/修改投诉类型（id为0时，则为新增投诉类型）-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">create</span></td>
+                        <td>279ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-28')">展开</button>
+                            <div id="details-28" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": {
+    "id": 6,
+    "complaintName": "应该",
+    "email": "qiangqiao@example.com",
+    "isSendEmail": false
+  },
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "71c2fd653d6ccc37eec4796ebf7c210c"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">客诉管理-客诉审核-审核-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>39ms</td>
+                        <td class="error-cell">AssertionError: assert 289 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-29')">展开</button>
+                            <div id="details-29" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "validationErrors": [
+    {
+      "memberNames": [
+        "$.ids"
+      ],
+      "errorMessage": "The JSON value could not be converted to System.Collections.Generic.List`1[System.Int32]. Path: $.ids | LineNumber: 0 | BytePositionInLine: 22."
+    },
+    {
+      "memberNames": [
+        "input"
+      ],
+      "errorMessage": "input is null!"
+    }
+  ],
+  "trace": null,
+  "result": null,
+  "isSuccess": false,
+  "errorCode": 2147483647,
+  "message": "Method arguments are not valid! See ValidationErrors for details.",
+  "operationId": "6c4513c2f1502ca0adaa7cd0255cf396"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">完成客诉-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>38ms</td>
+                        <td class="error-cell">AssertionError: assert 415 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-30')">展开</button>
+                            <div id="details-30" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "{\"type\":\"https://tools.ietf.org/html/rfc9110#section-15.5.16\",\"title\":\"Unsupported Media Type\",\"status\":415,\"traceId\":\"00-7e884c755e285368ea9d7739f31a66cd-1ab7128ad4de0ec2-01\"}",
+  "errorCode": 2147483647,
+  "operationId": "7e884c755e285368ea9d7739f31a66cd"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">客诉管理-客诉审核-查询-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>1.90s</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-31')">展开</button>
+                            <div id="details-31" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "MaxResultCount": 10,
+  "SkipCount": 0,
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>无</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">客诉记录导出Excel-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>933ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-32')">展开</button>
+                            <div id="details-32" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "MaxResultCount": 10,
+  "SkipCount": 0,
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": {
+    "fileUrl": "https://externalimage.demo.ehi.com.cn/1231/297e0fbea28d446d87840f9b36248909.xlsx",
+    "fileName": "客诉记录导出"
+  },
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "1d84e8f39aa33dc351cfb8f88208a808"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">删除投诉类型-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">delete</span></td>
+                        <td>66ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-33')">展开</button>
+                            <div id="details-33" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": false,
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "6bc56926bc3c28c67c3426461df42c24"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">获取客户一年的订单量-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>55ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-34')">展开</button>
+                            <div id="details-34" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": {
+    "entzjOrderCount": 0,
+    "blockOrderCount": 0,
+    "userOrderCount": 0
+  },
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "04159cdd45018d904308a517a72d1f3f"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">取消客诉-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">delete</span></td>
+                        <td>65ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-35')">展开</button>
+                            <div id="details-35" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "仅客诉状态为待提交、待提交【已退回】可取消客诉记录!",
+  "errorCode": 2147483647,
+  "operationId": "7dc6ed94692ef4525a91ffa5d9199f0e"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">根据订单号加载客诉信息上所需的订单信息-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>67ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-36')">展开</button>
+                            <div id="details-36" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "订单号为的订单不存在！",
+  "errorCode": 2147483647,
+  "operationId": "0eaf329c779ad74ea86bbe4323411ce3"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">获取客诉详情-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>174ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-37')">展开</button>
+                            <div id="details-37" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "没有此条记录",
+  "errorCode": 2147483647,
+  "operationId": "9ee2dc38c096b0a89e1525ed0008bd70"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">登记客诉-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">create</span></td>
+                        <td>136ms</td>
+                        <td class="error-cell">AssertionError: assert 500 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-38')">展开</button>
+                            <div id="details-38" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>无</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">客诉管理-客诉审核-审核-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>31ms</td>
+                        <td class="error-cell">AssertionError: assert 289 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-39')">展开</button>
+                            <div id="details-39" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "validationErrors": [
+    {
+      "memberNames": [
+        "$.ids"
+      ],
+      "errorMessage": "The JSON value could not be converted to System.Collections.Generic.List`1[System.Int32]. Path: $.ids | LineNumber: 0 | BytePositionInLine: 22."
+    },
+    {
+      "memberNames": [
+        "input"
+      ],
+      "errorMessage": "input is null!"
+    }
+  ],
+  "trace": null,
+  "result": null,
+  "isSuccess": false,
+  "errorCode": 2147483647,
+  "message": "Method arguments are not valid! See ValidationErrors for details.",
+  "operationId": "45f97141d07f7d4db9b532704ad8f0fa"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">获取客诉类型-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>29ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-40')">展开</button>
+                            <div id="details-40" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": [
+    {
+      "id": 1,
+      "complaintName": "事故",
+      "email": "shigu.qy@1hai.cn",
+      "isSendEmail": true
+    },
+    {
+      "id": 2,
+      "complaintName": "保养",
+      "email": "baoyang.qy@1hai.cn",
+      "isSendEmail": true
+    },
+    {
+      "id": 3,
+      "complaintName": "客服态度",
+      "email": "",
+      "isSendEmail": false
+    },
+    {
+      "id": 4,
+      "complaintName": "门店员工态度",
+      "email": "",
+      "isSendEmail": false
+    },
+    {
+      "id": 5,
+      "complaintName": "修理厂员工态度",
+      "email": "",
+      "isSendEmail": false
+    },
+    {
+      "id": 6,
+      "complaintName": "应该",
+      "email": "qiangqiao@example.com",
+      "isSendEmail": false
+    }
+  ],
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "c1733d1e57eec45c4c201c9b0b37ea1b"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">客诉管理-客诉审核-查询-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>264ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-41')">展开</button>
+                            <div id="details-41" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "MaxResultCount": 10,
+  "SkipCount": 0,
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>无</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">获取客诉审核记录日志-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>240ms</td>
+                        <td class="error-cell">AssertionError: assert 288 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-42')">展开</button>
+                            <div id="details-42" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "isSuccess": false,
+  "message": "没有此条记录",
+  "errorCode": 2147483647,
+  "operationId": "939b0c5eb8f4380bbf7aac53b8c40612"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="failed" data-feature="Complaint">
+                        <td><span class="status-badge status-failed">❌ failed</span></td>
+                        <td class="name-cell">客诉管理-客诉审核-审核-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>39ms</td>
+                        <td class="error-cell">AssertionError: assert 289 == 200</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-43')">展开</button>
+                            <div id="details-43" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "validationErrors": [
+    {
+      "memberNames": [
+        "$.files"
+      ],
+      "errorMessage": "The JSON value could not be converted to System.Collections.Generic.List`1[Corp.AfterSale.Core.CoreBusiness.Accident.Dto.PostAttachDto]. Path: $.files | LineNumber: 0 | BytePositionInLine: 57."
+    },
+    {
+      "memberNames": [
+        "input"
+      ],
+      "errorMessage": "input is null!"
+    }
+  ],
+  "trace": null,
+  "result": null,
+  "isSuccess": false,
+  "errorCode": 2147483647,
+  "message": "Method arguments are not valid! See ValidationErrors for details.",
+  "operationId": "8ccf3b902396a77643f45bde4efabf05"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">客诉记录导出Excel-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>3.35s</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-44')">展开</button>
+                            <div id="details-44" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "MaxResultCount": 10,
+  "SkipCount": 0,
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": {
+    "fileUrl": "https://externalimage.demo.ehi.com.cn/1231/9218bbda2a7747a399171c8c9afcbdf8.xlsx",
+    "fileName": "客诉记录导出"
+  },
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "ee2265304c2b564bbb91670935c3da31"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">删除投诉类型-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">delete</span></td>
+                        <td>53ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-45')">展开</button>
+                            <div id="details-45" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": false,
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "39fab66f952b557ef099ee8f89d85af2"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">获取客户一年的订单量-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>191ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-46')">展开</button>
+                            <div id="details-46" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": {
+    "entzjOrderCount": 0,
+    "blockOrderCount": 0,
+    "userOrderCount": 0
+  },
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "374b5e2e09487867e2e3e948030bbd08"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">客诉记录查询-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>345ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-47')">展开</button>
+                            <div id="details-47" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "MaxResultCount": 10,
+  "SkipCount": 0,
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>无</pre>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr data-status="passed" data-feature="Complaint">
+                        <td><span class="status-badge status-passed">✅ passed</span></td>
+                        <td class="name-cell">获取客诉类型-正向</td>
+                        <td><span class="feature-badge">Complaint</span></td>
+                        <td><span class="story-badge">read</span></td>
+                        <td>17ms</td>
+                        <td class="error-cell">-</td>
+                        <td>
+                            <button class="details-toggle" onclick="toggleDetails('details-48')">展开</button>
+                            <div id="details-48" class="details-content">
+                                <div class="label">请求参数:</div>
+                                <pre>{
+  "Platform": "MyEhi"
+}</pre>
+                                <div class="label">响应内容:</div>
+                                <pre>{
+  "result": [
+    {
+      "id": 1,
+      "complaintName": "事故",
+      "email": "shigu.qy@1hai.cn",
+      "isSendEmail": true
+    },
+    {
+      "id": 2,
+      "complaintName": "保养",
+      "email": "baoyang.qy@1hai.cn",
+      "isSendEmail": true
+    },
+    {
+      "id": 3,
+      "complaintName": "客服态度",
+      "email": "",
+      "isSendEmail": false
+    },
+    {
+      "id": 4,
+      "complaintName": "门店员工态度",
+      "email": "",
+      "isSendEmail": false
+    },
+    {
+      "id": 5,
+      "complaintName": "修理厂员工态度",
+      "email": "",
+      "isSendEmail": false
+    }
+  ],
+  "isSuccess": true,
+  "errorCode": 0,
+  "operationId": "a29a77f2f0eb522b81d842f507e42efc"
+}</pre>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function toggleDetails(id) {
+            const el = document.getElementById(id);
+            const btn = el.previousElementSibling;
+            if (el.classList.contains('show')) {
+                el.classList.remove('show');
+                btn.textContent = '展开';
+            } else {
+                el.classList.add('show');
+                btn.textContent = '收起';
+            }
+        }
+
+        function applyFilters() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const featureFilter = document.getElementById('featureFilter').value;
+            const rows = document.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+                const status = row.dataset.status;
+                const feature = row.dataset.feature;
+                const matchStatus = statusFilter === 'all' || status === statusFilter;
+                const matchFeature = featureFilter === 'all' || feature === featureFilter;
+                row.classList.toggle('hidden', !(matchStatus && matchFeature));
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('statusFilter').value = 'all';
+            document.getElementById('featureFilter').value = 'all';
+            applyFilters();
+        }
+
+        document.getElementById('statusFilter').addEventListener('change', applyFilters);
+        document.getElementById('featureFilter').addEventListener('change', applyFilters);
+    </script>
+</body>
+</html>

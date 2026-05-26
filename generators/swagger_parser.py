@@ -4,19 +4,31 @@ from utils.boundary_rules import DOTNET_ENUM_BLACKLIST
 # 操作类型识别关键词
 CRUD_KEYWORDS = {
     "create": ["添加", "创建", "新增", "登记"],
-    "delete": ["删除", "取消"],
-    "update": ["修改", "更新", "保存", "配置"],
-    "read": ["获取", "查询"],
+    "delete": ["删除", "取消", "移除"],
+    "update": ["修改", "更新", "保存", "配置", "审核", "完成", "处理",
+               "分配", "录入", "发送", "撤销", "批量修改", "推送", "同步",
+               "解析", "导入", "预约"],
+    "read": ["获取", "查询", "导出"],
 }
 
 
-def classify_operation(method: str, summary: str) -> str:
+def classify_operation(method: str, summary: str, has_body: bool = False) -> str:
     if method == "GET":
         return "read"
+    # POST 有 body 且 summary 不含查询关键词 → 不可能是 read
+    if has_body:
+        is_read = any(kw in summary for kw in CRUD_KEYWORDS["read"])
+        if not is_read:
+            for op_type, keywords in CRUD_KEYWORDS.items():
+                if op_type == "read":
+                    continue
+                if any(kw in summary for kw in keywords):
+                    return op_type
+            return "update"  # 有 body 的 POST 默认 update
     for op_type, keywords in CRUD_KEYWORDS.items():
         if any(kw in summary for kw in keywords):
             return op_type
-    return "read"  # 默认归为查询
+    return "read"
 
 
 def parse_swagger_file(file_path: str) -> list[dict]:
@@ -34,7 +46,8 @@ def parse_swagger_file(file_path: str) -> list[dict]:
                 continue
 
             summary = detail.get("summary", "")
-            operation_type = classify_operation(method, summary)
+            has_body = bool(detail.get("requestBody"))
+            operation_type = classify_operation(method, summary, has_body)
             tags = detail.get("tags", ["Unknown"])
             feature = tags[0] if tags else "Unknown"
 

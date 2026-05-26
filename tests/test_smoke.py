@@ -1,3 +1,5 @@
+import json
+
 import allure
 import pytest
 
@@ -21,8 +23,8 @@ def test_crud_smoke(case, http_client):
         else:
             response = http_client.request(case["method"], case["endpoint"], params=params)
 
-    allure.attach(str(params), name="请求参数", attachment_type=allure.attachment_type.JSON)
-    allure.attach(response.text[:2000], name="响应内容", attachment_type=allure.attachment_type.JSON)
+    allure.attach(json.dumps(params, ensure_ascii=False), name="请求参数", attachment_type=allure.attachment_type.JSON)
+    allure.attach(response.text, name="响应内容", attachment_type=allure.attachment_type.JSON)
 
     assert response.status_code == case["expect"]["status"]
     body_json = response.json()
