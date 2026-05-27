@@ -1,13 +1,20 @@
 from faker import Faker
 from utils.boundary_rules import BOUNDARY_RULES, FIELD_KEYWORD_RULES
+from generators.data_prefetch import is_list_interface
 
 fake = Faker("zh_CN")
+
+# 公共参数，不需要从缓存填充
+COMMON_PARAMS = {"Platform", "SkipCount", "MaxResultCount", "IsTrack", "OperatorId", "QueryWriteDb"}
 
 
 def generate_test_cases(interfaces: list[dict], default_platform: str = "MyEhi") -> list[dict]:
     cases = []
     for iface in interfaces:
-        # 正向用例
+        # 只生成查询接口的用例
+        if iface["operation_type"] != "read":
+            continue
+
         positive_params = _generate_positive_params(iface, default_platform)
         cases.append({
             "name": f"{iface['summary']}-正向",
@@ -18,18 +25,19 @@ def generate_test_cases(interfaces: list[dict], default_platform: str = "MyEhi")
             "case_type": "positive",
             "params": positive_params,
             "expect": {"status": 200},
+            "is_list": is_list_interface(iface),
         })
-
-        # 边界值用例（仅增删改）
-        if iface["operation_type"] in ("create", "update", "delete"):
-            boundary_cases = _generate_boundary_cases(iface, default_platform)
-            cases.extend(boundary_cases)
 
     return cases
 
 
+# 布尔型参数默认给 true（如 IsAuth、IncludeRs）
+BOOL_DEFAULT_TRUE = {"IsAuth", "IncludeRs", "isAuth", "includeRs"}
+
+
 def _generate_positive_params(iface: dict, default_platform: str) -> dict:
     params = {}
+    is_list = is_list_interface(iface)
 
     # Query 参数
     for p in iface.get("query_params", []):
@@ -43,10 +51,16 @@ def _generate_positive_params(iface: dict, default_platform: str) -> dict:
             params[name] = 0
         elif name in ("MaxResultCount",):
             params[name] = 10
-        elif p.get("required", False):
+        elif name in COMMON_PARAMS:
+            continue
+        elif name in BOOL_DEFAULT_TRUE:
+            params[name] = True
+        elif is_list:
+            continue
+        else:
             params[name] = _generate_value_by_type(name, ptype, schema)
 
-    # Request body 参数（POST 接口）
+    # Request body 参数（POST 查询接口）
     body_schema = iface.get("request_body_schema", {})
     if body_schema and iface["method"] == "POST":
         body = _generate_body_from_schema(body_schema)

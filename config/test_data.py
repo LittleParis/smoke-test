@@ -10,6 +10,9 @@ TEST_DATA = {
     "Accident": {
         "accidentId": 1186822,
     },
+    "Repair": {
+        "userCode": "CS001",
+    },
 }
 
 # 可通过环境变量覆盖

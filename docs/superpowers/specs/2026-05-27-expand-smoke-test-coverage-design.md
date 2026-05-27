@@ -2,19 +2,21 @@
 
 ## 目标
 
-将冒烟测试从 21 个 read 接口扩展到 46 个，覆盖售后核心 6 个模块：Complaint、Repair、Accident、AfterSaleSetting、Annual、Report。
+将冒烟测试从 21 个 read 接口扩展到 41 个，覆盖售后核心 6 个模块：Complaint、Repair、Accident、AfterSaleSetting、Annual、Report。
 
-## 覆盖率变更
+## 最终覆盖率（实际实施后）
 
 | 模块 | read 总数 | 修改前 | 修改后 | 新增 |
 |------|----------|--------|--------|------|
 | Complaint | 9 | 9 | 9 | 0 |
-| Repair | 28 | 10 | 23 | +13 |
+| Repair | 28 | 10 | 19 | +9 |
 | Accident | 8 | 1 | 5 | +4 |
 | AfterSaleSetting | 2 | 1 | 2 | +1 |
 | Annual | 2 | 0 | 2 | +2 |
 | Report | 5 | 0 | 5 | +5 |
-| **合计** | **54** | **21** | **46** | **+25** |
+| **合计** | **54** | **21** | **41** | **+20** |
+
+注：部分接口因服务端校验复杂（如 Drivers 数组必填）、导出超限、或依赖外部系统（考拉）而移除。
 
 ## 1. 分类逻辑修正
 

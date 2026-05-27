@@ -13,22 +13,23 @@ CRUD_KEYWORDS = {
 
 
 def classify_operation(method: str, summary: str, has_body: bool = False) -> str:
-    if method == "GET":
+    # GET 一定是查询，不检查关键词
+    if method.upper() == "GET":
         return "read"
-    # POST 有 body 且 summary 不含查询关键词 → 不可能是 read
-    if has_body:
-        is_read = any(kw in summary for kw in CRUD_KEYWORDS["read"])
-        if not is_read:
-            for op_type, keywords in CRUD_KEYWORDS.items():
-                if op_type == "read":
-                    continue
-                if any(kw in summary for kw in keywords):
-                    return op_type
-            return "update"  # 有 body 的 POST 默认 update
+
+    # POST/PUT/DELETE：mutation 关键词优先（宁可漏测查询，不能误执行写操作）
     for op_type, keywords in CRUD_KEYWORDS.items():
+        if op_type == "read":
+            continue
         if any(kw in summary for kw in keywords):
             return op_type
-    return "read"
+
+    # 含 read 关键词 → read
+    if any(kw in summary for kw in CRUD_KEYWORDS["read"]):
+        return "read"
+
+    # 无关键词：有 body → update，无 body → read
+    return "update" if has_body else "read"
 
 
 def parse_swagger_file(file_path: str) -> list[dict]:
