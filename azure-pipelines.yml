@@ -1,5 +1,7 @@
-trigger:
-  - none
+pr:
+  branches:
+    include:
+      - main
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -19,14 +21,31 @@ steps:
       TEST_USERNAME: $(testUsername)
       TEST_PASSWORD: $(testPassword)
 
-  - task: AllureGenerate@1
+  - script: python generate_report.py allure-report.html
+    displayName: 'Generate HTML report'
+    condition: always()
+
+  - script: |
+      python scripts/notify_wecom.py \
+        --webhook $(WecomWebhook) \
+        --results allure-results \
+        --build-url "$(Build.BuildUri)" \
+        --branch "$(Build.SourceBranch)" \
+        --trigger "$(Build.Reason)" \
+        --notify-always
+    displayName: 'Send WeCom notification'
+    condition: always()
+    env:
+      WECOM_WEBHOOK: $(WecomWebhook)
+
+  - task: PublishBuildArtifacts@1
     inputs:
-      resultsDir: 'allure-results'
-      targetDir: 'allure-report'
+      pathToPublish: 'allure-report.html'
+      artifactName: 'smoke-test-report'
     condition: always()
 
   - task: PublishBuildArtifacts@1
     inputs:
-      pathToPublish: 'allure-report'
-      artifactName: 'allure-report'
+      pathToPublish: 'allure-results'
+      artifactName: 'allure-results'
     condition: always()
