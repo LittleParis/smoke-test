@@ -164,6 +164,7 @@ def main():
     parser.add_argument("--branch", default="", help="分支名")
     parser.add_argument("--trigger", default="", help="触发原因")
     parser.add_argument("--notify-always", action="store_true", help="无论成功失败都发通知")
+    parser.add_argument("--dry-run", action="store_true", help="只打印消息不发送（本地测试用）")
 
     args = parser.parse_args()
 
@@ -185,6 +186,10 @@ def main():
     # 构建并发送消息
     message = build_message(stats, failed_cases, args.build_url, args.branch, args.trigger, duration)
     print(f"[INFO] 通知内容:\n{message}\n")
+
+    if args.dry_run:
+        print("[INFO] --dry-run 模式，跳过发送")
+        return
 
     send_notification(args.webhook, message)
 
