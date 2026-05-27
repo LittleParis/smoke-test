@@ -3,6 +3,9 @@ pr:
     include:
       - main
 
+variables:
+  - group: SmokeTest  # 引用变量组，包含 testUsername/testPassword/WecomWebhook
+
 pool:
   vmImage: 'ubuntu-latest'
 
@@ -27,7 +30,7 @@ steps:
 
   - script: |
       python scripts/notify_wecom.py \
-        --webhook $(WecomWebhook) \
+        --webhook "$WECOM_WEBHOOK" \
         --results allure-results \
         --build-url "$(Build.BuildUri)" \
         --branch "$(Build.SourceBranch)" \
