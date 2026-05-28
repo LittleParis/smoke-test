@@ -8,9 +8,12 @@ def test_crud_smoke(case, http_client, prefetch_cache):
     params = dict(case["params"])
     body = params.pop("_body", None)
 
-    # 详情接口：用预取缓存替换占位参数
-    if not case.get("is_list", False):
-        _fill_params_from_cache(params, case["feature"], prefetch_cache)
+    # 用预取缓存替换占位参数（所有接口）
+    _fill_params_from_cache(params, case["feature"], prefetch_cache, is_list=case.get("is_list", False))
+
+    # 列表接口：补充缓存中的过滤参数（如 CarNo 给导出接口用）
+    if case.get("is_list", False):
+        _inject_list_filter_params(params, case["feature"], prefetch_cache)
 
     allure.dynamic.feature(case["feature"])
     allure.dynamic.story(case["story"])
@@ -43,8 +46,26 @@ def test_crud_smoke(case, http_client, prefetch_cache):
         _assert_params_match_response(params, body_json, case)
 
 
-def _fill_params_from_cache(params: dict, module: str, cache: dict):
-    """用预取缓存替换占位参数，缓存无匹配则删除该参数（避免传 Faker 假值）"""
+def _inject_list_filter_params(params: dict, module: str, cache: dict):
+    """列表接口：从缓存中注入过滤参数（如导出接口需要 CarNo 限制范围）"""
+    from generators.data_prefetch import get_param_value
+    # 注入 CarNo
+    if "CarNo" not in params:
+        car_no = get_param_value("CarNo", module, cache)
+        if car_no is not None:
+            params["CarNo"] = car_no
+    # 注入 KeyNo（GetActionLogs/GetOperationLogs）
+    if "KeyNo" not in params:
+        key_no = get_param_value("KeyNo", module, cache)
+        if key_no is not None:
+            params["KeyNo"] = key_no
+
+
+def _fill_params_from_cache(params: dict, module: str, cache: dict, is_list: bool = False):
+    """用预取缓存替换占位参数
+    详情接口：缓存无匹配则删除参数（避免传 Faker 假值）
+    列表接口：只补充有缓存值的过滤参数，不删除已有参数
+    """
     from generators.data_prefetch import get_param_value
     COMMON_PARAMS = {"Platform", "SkipCount", "MaxResultCount", "IsTrack", "OperatorId", "QueryWriteDb"}
     BOOL_DEFAULTS = {"IsAuth", "IncludeRs", "isAuth", "includeRs"}
@@ -54,7 +75,7 @@ def _fill_params_from_cache(params: dict, module: str, cache: dict):
         cached_value = get_param_value(name, module, cache)
         if cached_value is not None:
             params[name] = cached_value
-        else:
+        elif not is_list:
             del params[name]
 
 

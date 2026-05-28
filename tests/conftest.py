@@ -80,6 +80,10 @@ def pytest_generate_tests(metafunc):
             "/api/Repair/GetTicketGroupByBizType",
             # 材料不符合
             "/api/Repair/UserReimburseNotMatchInfos",
+            # 操作日志（KeyNo 从缓存 repairId 填充）
+            "/api/Repair/GetOperationLogs",
+            # 保养记录导出（CarNo 从缓存填充，限制导出范围）
+            "/api/Repair/GetExportRepairInfoExcel",
         }
         cases = [c for c in cases if c["feature"] != "Repair" or c["endpoint"] in REPAIR_WHITELIST]
 

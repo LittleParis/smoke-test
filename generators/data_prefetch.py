@@ -27,6 +27,7 @@ MODULE_FIELD_MAPPING = {
         "userPhone": ["userPhone"],
         "ticketId": ["ticketId"],
         "key": ["key"],
+        "keyNo": ["repairId"],  # GetActionLogs/GetOperationLogs 用
     },
     "Annual": {
         "carNo": ["carNo"],
