@@ -1,0 +1,16 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+# 选用宽松规则集，保证现有代码可过
+# E: pycodestyle errors, F: pyflakes, I: isort, W: warnings
+select = ["E", "F", "I", "W"]
+ignore = [
+    "E501",   # 行长由 line-length 控制，不强制断行
+    "F401",   # 未使用的 import（__init__.py 中常见）
+    "F841",   # 未使用的局部变量
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["config", "core", "generators", "utils", "tests"]

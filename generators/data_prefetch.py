@@ -1,39 +1,5 @@
+from config.modules import MODULE_FIELD_MAPPING
 from config.test_data import TEST_DATA
-
-# 各模块要从列表响应中提取的字段
-# key: 缓存中存储的字段名, value: 列表响应中的字段名
-MODULE_FIELD_MAPPING = {
-    "Complaint": {
-        "id": ["id"],
-        "orderNo": ["selfOrderNo", "orderNo"],
-        "complainantPhone": ["complainantPhone"],
-        "complainantName": ["complainantName"],
-    },
-    "Accident": {
-        "accidentId": ["accidentId"],
-        "orderNo": ["orderNo"],
-        "carNo": ["carNo"],
-        "acctId": ["acctId"],
-    },
-    "AfterSaleSetting": {
-        "id": ["id"],
-        "itemId": ["itemId"],
-    },
-    "Repair": {
-        "repairId": ["repairId"],
-        "carNo": ["carNo"],
-        "orderNo": ["orderNo", "selfOrderNo"],
-        "id": ["id"],
-        "userPhone": ["userPhone"],
-        "ticketId": ["ticketId"],
-        "key": ["key"],
-        "keyNo": ["repairId"],  # GetActionLogs/GetOperationLogs 用
-    },
-    "Annual": {
-        "carNo": ["carNo"],
-        "orderNo": ["orderNo"],
-    },
-}
 
 
 def is_list_interface(iface: dict) -> bool:
@@ -121,7 +87,14 @@ def prefetch_module_data(http_client, interfaces: list[dict], default_platform: 
 
 
 def get_param_value(param_name: str, module: str, cache: dict) -> any:
-    """从缓存中获取参数值（忽略大小写）"""
+    """从缓存中获取参数值（忽略大小写）。
+
+    匹配优先级：
+    1. 精确匹配
+    2. 忽略大小写匹配
+    3. 模块前缀映射：ComplaintId → complaint.id, AccidentId → accident.accidentId
+       （仅当缓存中存在与参数前缀对应的字段时，避免任意 id 误匹配）
+    """
     module_cache = cache.get(module, {})
     param_lower = param_name.lower()
 
@@ -134,14 +107,14 @@ def get_param_value(param_name: str, module: str, cache: dict) -> any:
         if key.lower() == param_lower:
             return value
 
-    # 特殊映射：ComplaintId -> id, AccidentId -> accidentId
-    if param_lower.endswith("id") and len(param_lower) > 2:
-        base_id = param_lower.replace("id", "").replace("Id", "")
-        for key in ["id", f"{base_id}id", f"{base_id}Id"]:
-            if key in module_cache:
+    # 模块前缀映射：ComplaintId → 模块名小写 + id（如 complaint.id）
+    # 仅在参数以模块名开头时尝试，避免跨模块误匹配
+    module_lower = module.lower()
+    if param_lower.startswith(module_lower) and param_lower != module_lower:
+        suffix = param_lower[len(module_lower):]  # 如 "Id"
+        candidate = f"{module_lower}{suffix}".lower()
+        for key in module_cache:
+            if key.lower() == candidate:
                 return module_cache[key]
-        # 最后兜底：任何以 id 结尾的参数尝试匹配 id 字段
-        if "id" in module_cache:
-            return module_cache["id"]
 
     return None

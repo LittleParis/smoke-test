@@ -17,11 +17,12 @@ import argparse
 import ast
 import json
 import os
-import requests
 import sys
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from collections import defaultdict
+
+import requests
 
 
 def load_json(filepath):

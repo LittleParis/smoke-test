@@ -4,11 +4,12 @@ on:
   pull_request:
     branches: [ main ]
     types: [ closed ]
+  workflow_dispatch:  # 支持手动触发，便于调试
 
 jobs:
   smoke-test:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
 
     steps:
       - uses: actions/checkout@v4
@@ -16,15 +17,31 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'          # 缓存 pip 依赖，加速构建
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run smoke tests
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Run unit tests
+        run: pytest tests/unit/ -o addopts="" --tb=short
+
+      - name: Run pipeline smoke tests
+        run: pytest tests/test_pipeline.py --alluredir=allure-results
+        env:
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+
+      - name: Run full swagger scan (optional)
+        if: github.event_name == 'workflow_dispatch'
         run: pytest tests/test_smoke.py --alluredir=allure-results
         env:
           TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          SMOKE_MODE: full
 
       - name: Generate HTML report
         if: always()
@@ -37,8 +54,8 @@ jobs:
             --webhook "${{ secrets.WECOM_WEBHOOK }}" \
             --results allure-results \
             --build-url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --branch "${{ github.head_ref }}" \
-            --trigger "PullRequest" \
+            --branch "${{ github.head_ref || github.ref_name }}" \
+            --trigger "${{ github.event_name }}" \
             --notify-always
 
       - name: Upload HTML report

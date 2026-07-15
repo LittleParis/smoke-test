@@ -1,11 +1,18 @@
+import os
+
+from allpairspy import AllPairs
 from faker import Faker
-from utils.boundary_rules import BOUNDARY_RULES, FIELD_KEYWORD_RULES
+
 from generators.data_prefetch import is_list_interface
+from utils.boundary_rules import BOUNDARY_RULES, FIELD_KEYWORD_RULES
 
 fake = Faker("zh_CN")
 
 # 公共参数，不需要从缓存填充
 COMMON_PARAMS = {"Platform", "SkipCount", "MaxResultCount", "IsTrack", "OperatorId", "QueryWriteDb"}
+
+# 用例类型开关（可通过环境变量覆盖）
+ENABLE_BOUNDARY_CASES = os.getenv("ENABLE_BOUNDARY_CASES", "false").lower() == "true"
 
 
 def generate_test_cases(interfaces: list[dict], default_platform: str = "MyEhi") -> list[dict]:
@@ -28,11 +35,89 @@ def generate_test_cases(interfaces: list[dict], default_platform: str = "MyEhi")
             "is_list": is_list_interface(iface),
         })
 
+        # 列表接口：生成组合查询用例
+        if is_list_interface(iface) and iface["method"] == "GET":
+            combo_cases = _generate_combo_cases(iface, default_platform)
+            cases.extend(combo_cases)
+
+        # 边界值用例（默认关闭，通过环境变量启用）
+        if ENABLE_BOUNDARY_CASES:
+            boundary_cases = _generate_boundary_cases(iface, default_platform)
+            cases.extend(boundary_cases)
+
     return cases
 
 
 # 布尔型参数默认给 true（如 IsAuth、IncludeRs）
 BOOL_DEFAULT_TRUE = {"IsAuth", "IncludeRs", "isAuth", "includeRs"}
+
+# 可用于组合查询的缓存参数（运行时从预取缓存填值）
+COMBO_CACHE_PARAMS = {
+    "CarNo", "carNo", "OrderNo", "orderNo", "RepairId", "repairId",
+    "AcctId", "acctId", "Id", "id", "UserPhone", "userPhone",
+    "Phone", "phone", "AccidentId", "accidentId", "ItemId", "itemId",
+}
+
+
+def _generate_combo_cases(iface: dict, default_platform: str) -> list[dict]:
+    """为列表接口生成 Pairwise 正交组合查询用例"""
+    cases = []
+
+    # 收集可用业务参数的候选值列表
+    param_values = []
+    for p in iface.get("query_params", []):
+        name = p["name"]
+        if name in COMMON_PARAMS or name in BOOL_DEFAULT_TRUE:
+            continue
+        schema = p.get("schema", {})
+        ptype = schema.get("type", "string")
+
+        candidates = []
+        # 优先级1: 缓存参数（运行时从预取缓存填值，单值）
+        if name in COMBO_CACHE_PARAMS:
+            candidates.append((name, f"__cache__{name}"))
+        # 优先级2: 枚举参数（取前2个有效值，Pairwise 可交互组合）
+        elif "enum" in schema:
+            valid = [v for v in schema["enum"] if isinstance(v, (str, int)) and not str(v).startswith("__")]
+            for v in valid[:2]:
+                candidates.append((name, v))
+        # 优先级3: 布尔参数（True + False）
+        elif ptype == "boolean":
+            candidates.append((name, True))
+            candidates.append((name, False))
+
+        if candidates:
+            param_values.append(candidates)
+
+    if not param_values:
+        return cases
+
+    # 单参数：每个 candidate 包装成单元素列表，保持与 AllPairs 输出结构一致
+    # 多参数：用 AllPairs 正交组合，每个 combo 是 [(name, value), ...] 列表
+    if len(param_values) == 1:
+        combos = [[c] for c in param_values[0]]
+    else:
+        combos = AllPairs(param_values)
+
+    for combo in combos:
+        params = {"Platform": default_platform, "SkipCount": 0, "MaxResultCount": 10}
+        param_names = []
+        for name, value in combo:
+            params[name] = value
+            param_names.append(name)
+        cases.append({
+            "name": f"{iface['summary']}-组合查询-{'+'.join(param_names)}",
+            "feature": iface["feature"],
+            "story": iface["operation_type"],
+            "endpoint": iface["endpoint"],
+            "method": iface["method"],
+            "case_type": "pairwise",
+            "params": params,
+            "expect": {"status": 200},
+            "is_list": True,
+        })
+
+    return cases
 
 
 def _generate_positive_params(iface: dict, default_platform: str) -> dict:
@@ -104,14 +189,19 @@ def _generate_value_by_type(field_name: str, field_type: str, schema: dict = Non
 
 
 def _generate_body_from_schema(schema: dict) -> dict:
+    """从 schema 生成请求体。
+
+    仅生成 required 字段，保证每次运行用例一致（避免随机性导致不可复现）。
+    """
     properties = schema.get("properties", {})
     required_fields = schema.get("required", [])
     if not properties:
         return {}
 
     body = {}
-    for prop_name, prop_schema in properties.items():
-        if prop_name in required_fields or fake.random_int(min=0, max=1):
+    for prop_name in required_fields:
+        if prop_name in properties:
+            prop_schema = properties[prop_name]
             ptype = prop_schema.get("type", "string")
             body[prop_name] = _generate_value_by_type(prop_name, ptype, prop_schema)
     return body

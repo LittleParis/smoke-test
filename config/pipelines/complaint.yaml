@@ -1,0 +1,48 @@
+# 业务流程冒烟配置 - 投诉模块
+#
+# 演示多接口编排：列表查询 → 提取 id → 详情查询 → 校验入参出参一致性
+# 后期熟悉业务后，按此 schema 编写实际业务流程即可。
+
+name: 投诉业务冒烟
+module: Complaint
+enabled: true
+
+# 数据预取：从列表接口提取字段到缓存，供 steps 中 $cache.<field> 引用
+prefetch:
+  endpoint: /api/Complaint/GetComplaints
+  fields:
+    id: [id]
+    orderNo: [selfOrderNo, orderNo]
+    complainantPhone: [complainantPhone]
+    complainantName: [complainantName]
+
+steps:
+  # 步骤1: 查询投诉列表
+  - name: query_list
+    endpoint: /api/Complaint/GetComplaints
+    method: GET
+    type: list
+    params:
+      Platform: MyEhi
+      SkipCount: 0
+      MaxResultCount: 10
+    # 从响应提取字段，供后续步骤 $ref.query_list.<key> 引用
+    extract:
+      complaint_id: result.items.0.id
+      complaint_order_no: result.items.0.selfOrderNo
+    expect:
+      status: 200
+      is_success: true
+
+  # 步骤2: 查询投诉详情（引用步骤1提取的 id）
+  - name: query_detail
+    endpoint: /api/Complaint/GetComplaint
+    method: GET
+    type: detail
+    params:
+      Platform: MyEhi
+      id: $ref.query_list.complaint_id
+    expect:
+      status: 200
+      is_success: true
+      match_response: true  # 校验请求参数 id == 响应中 id 字段

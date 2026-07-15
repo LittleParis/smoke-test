@@ -9,9 +9,9 @@ import ast
 import json
 import os
 import sys
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from collections import defaultdict
 
 
 def load_json(filepath):

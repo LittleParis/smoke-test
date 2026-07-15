@@ -13,3 +13,9 @@ __pycache__/
 
 # Claude
 .claude/
+
+# 凭据（本地用 .env，CI 用 secrets）
+.env
+
+# ruff 缓存
+.ruff_cache/
