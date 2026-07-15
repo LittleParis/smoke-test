@@ -6,6 +6,7 @@
 """
 
 import ast
+import html as html_lib
 import json
 import os
 import sys
@@ -25,7 +26,42 @@ def load_json(filepath):
     try:
         return ast.literal_eval(content)
     except Exception:
-        return None
+            return None
+
+
+def iter_allure_attachments(node):
+    """递归遍历测试结果及其嵌套步骤中的附件。"""
+    for attachment in node.get("attachments", []):
+        yield attachment
+    for step in node.get("steps", []):
+        yield from iter_allure_attachments(step)
+
+
+def collect_result_details(result, attachments):
+    """收集多步骤流程的请求、响应和流程摘要附件。"""
+    requests_detail = []
+    responses_detail = []
+    pipeline_summary = None
+
+    for attachment in iter_allure_attachments(result):
+        name = attachment.get("name", "")
+        source = attachment.get("source", "")
+        content = attachments.get(source)
+        if content is None:
+            continue
+        item = {"name": name, "content": content}
+        if "请求" in name or "param" in name.lower():
+            requests_detail.append(item)
+        elif "响应" in name or "response" in name.lower():
+            responses_detail.append(item)
+        elif "流程结果摘要" in name:
+            pipeline_summary = content
+
+    return {
+        "requests": requests_detail,
+        "responses": responses_detail,
+        "pipeline_summary": pipeline_summary,
+    }
 
 
 def format_duration(ms):
@@ -201,8 +237,9 @@ def generate_html(results, attachments, output_path):
     for feature in sorted(by_feature.keys()):
         stats = by_feature[feature]
         row_total = sum(stats.values())
+        feature_html = html_lib.escape(str(feature), quote=True)
         html += f'''                    <tr>
-                        <td>{feature}</td>
+                        <td>{feature_html}</td>
                         <td style="color:#28a745">{stats.get("passed", 0)}</td>
                         <td style="color:#dc3545">{stats.get("failed", 0)}</td>
                         <td style="color:#fd7e14">{stats.get("broken", 0)}</td>
@@ -231,7 +268,8 @@ def generate_html(results, attachments, output_path):
 
     # 模块筛选选项
     for feature in sorted(by_feature.keys()):
-        html += f'                <option value="{feature}">{feature}</option>\n'
+        feature_html = html_lib.escape(str(feature), quote=True)
+        html += f'                <option value="{feature_html}">{feature_html}</option>\n'
 
     html += '''            </select>
             <button onclick="resetFilters()">重置</button>
@@ -274,29 +312,33 @@ def generate_html(results, attachments, output_path):
         if status_details.get("message"):
             error_msg = status_details["message"].split("\n")[0]  # 只取第一行
 
-        # 获取附件
-        req_attachment = None
-        resp_attachment = None
-        for att in r.get("attachments", []):
-            att_name = att.get("name", "")
-            source = att.get("source", "")
-            if "请求" in att_name or "param" in att_name.lower():
-                req_attachment = attachments.get(source)
-            elif "响应" in att_name or "response" in att_name.lower():
-                resp_attachment = attachments.get(source)
+        details = collect_result_details(r, attachments)
 
         # 详情内容
         details_id = f"details-{i}"
-        req_json = json.dumps(req_attachment, ensure_ascii=False, indent=2) if req_attachment else "无"
-        resp_json = json.dumps(resp_attachment, ensure_ascii=False, indent=2) if resp_attachment else "无"
+        req_json = html_lib.escape(
+            json.dumps(details["requests"], ensure_ascii=False, indent=2) if details["requests"] else "无"
+        )
+        resp_json = html_lib.escape(
+            json.dumps(details["responses"], ensure_ascii=False, indent=2) if details["responses"] else "无"
+        )
+        summary_json = (
+            html_lib.escape(json.dumps(details["pipeline_summary"], ensure_ascii=False, indent=2))
+            if details["pipeline_summary"]
+            else "无"
+        )
+        name_html = html_lib.escape(str(name), quote=True)
+        feature_html = html_lib.escape(str(feature), quote=True)
+        story_html = html_lib.escape(str(story), quote=True)
+        error_html = html_lib.escape(str(error_msg), quote=True)
 
-        html += f'''                    <tr data-status="{status}" data-feature="{feature}">
+        html += f'''                    <tr data-status="{status}" data-feature="{feature_html}">
                         <td><span class="status-badge status-{status}">{get_status_icon(status)} {status}</span></td>
-                        <td class="name-cell">{name}</td>
-                        <td><span class="feature-badge">{feature or '-'}</span></td>
-                        <td><span class="story-badge">{story or '-'}</span></td>
+                        <td class="name-cell">{name_html}</td>
+                        <td><span class="feature-badge">{feature_html or '-'}</span></td>
+                        <td><span class="story-badge">{story_html or '-'}</span></td>
                         <td>{format_duration(duration)}</td>
-                        <td class="error-cell">{error_msg or '-'}</td>
+                        <td class="error-cell">{error_html or '-'}</td>
                         <td>
                             <button class="details-toggle" onclick="toggleDetails('{details_id}')">展开</button>
                             <div id="{details_id}" class="details-content">
@@ -304,6 +346,8 @@ def generate_html(results, attachments, output_path):
                                 <pre>{req_json}</pre>
                                 <div class="label">响应内容:</div>
                                 <pre>{resp_json}</pre>
+                                <div class="label">流程摘要:</div>
+                                <pre>{summary_json}</pre>
                             </div>
                         </td>
                     </tr>
@@ -395,9 +439,10 @@ def main():
     print(f"\n[OK] 报告已生成: {output_path}")
     print(f"   总计: {total} | 通过: {by_status.get('passed', 0)} | 失败: {by_status.get('failed', 0)} | 异常: {by_status.get('broken', 0)}")
 
-    # 尝试在浏览器中打开
-    import webbrowser
-    webbrowser.open(f"file://{output_path.absolute()}")
+    # 本地运行时打开；CI 中只生成文件，不尝试启动浏览器。
+    if not os.getenv("CI"):
+        import webbrowser
+        webbrowser.open(f"file://{output_path.absolute()}")
 
 
 if __name__ == "__main__":

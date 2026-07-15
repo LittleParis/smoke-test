@@ -10,6 +10,8 @@ from utils.http_client import HttpClient
 
 @pytest.fixture(scope="session")
 def http_client():
+    assert settings.USERNAME, "缺少 TEST_USERNAME，请通过 .env 或 CI Secrets 注入"
+    assert settings.PASSWORD, "缺少 TEST_PASSWORD，请通过 .env 或 CI Secrets 注入"
     client = HttpClient(
         base_url=settings.BASE_URL,
         login_url=settings.LOGIN_URL,

@@ -1,0 +1,41 @@
+# 维修模块核心查询冒烟：列表 → 详情
+version: 1
+name: 维修业务查询冒烟
+module: Repair
+enabled: true
+tags: [gate, query]
+
+steps:
+  - name: query_list
+    endpoint: /api/Repair/GetRepairInfos
+    method: GET
+    type: list
+    params:
+      Platform: $var.platform
+      SkipCount: 0
+      MaxResultCount: 10
+      IsAuth: true
+    extract:
+      repair_id: result.items.0.repairId
+    expect:
+      status: 200
+      equals:
+        isSuccess: true
+        errorCode: 0
+      not_empty:
+        - result.items
+
+  - name: query_detail
+    endpoint: /api/Repair/GetRepairInfo
+    method: GET
+    type: detail
+    params:
+      Platform: $var.platform
+      repairId: $ref.query_list.repair_id
+      actionType: 1
+    expect:
+      status: 200
+      equals:
+        isSuccess: true
+        errorCode: 0
+        result.repairId: $ref.query_list.repair_id

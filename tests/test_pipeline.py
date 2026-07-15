@@ -15,62 +15,7 @@ import pytest
 from config import settings
 from core.pipeline_executor import PipelineResult, run_pipeline
 from core.pipeline_loader import PipelineConfig, load_all_pipelines
-from utils.http_client import HttpClient
-
-
-@pytest.fixture(scope="session")
-def http_client():
-    """登录后的 HTTP 客户端（session 级共享）"""
-    client = HttpClient(
-        base_url=settings.BASE_URL,
-        login_url=settings.LOGIN_URL,
-        login_return_url=settings.LOGIN_RETURN_URL,
-        verify_ssl=settings.VERIFY_SSL,
-    )
-    assert client.login(settings.USERNAME, settings.PASSWORD), "Login failed"
-    yield client
-
-
-@pytest.fixture(scope="session")
-def pipeline_configs():
-    """加载所有启用的业务流程配置"""
-    return load_all_pipelines()
-
-
-@pytest.fixture(scope="session")
-def prefetch_cache(http_client, pipeline_configs):
-    """预取数据缓存。
-
-    合并所有 pipeline 的 prefetch 配置，调用各自的列表接口提取字段。
-    返回: {模块: {字段: 值}}
-    """
-    from generators.data_prefetch import MODULE_FIELD_MAPPING, prefetch_module_data
-    from generators.swagger_parser import parse_swagger_file
-
-    # 构建 prefetch 用的 interfaces 列表（从 pipeline 配置推导）
-    interfaces = []
-    for cfg in pipeline_configs:
-        if cfg.prefetch.endpoint and cfg.module:
-            interfaces.append({
-                "endpoint": cfg.prefetch.endpoint,
-                "method": "GET",
-                "feature": cfg.module,
-                "query_params": [
-                    {"name": "MaxResultCount", "required": False, "schema": {}},
-                    {"name": "SkipCount", "required": False, "schema": {}},
-                ],
-            })
-
-    # 同时合并 swagger 中的列表接口（用于 MODULE_FIELD_MAPPING 驱动的预取）
-    try:
-        swagger_interfaces = parse_swagger_file(settings.SWAGGER_FILE)
-        if settings.TEST_MODULES:
-            swagger_interfaces = [i for i in swagger_interfaces if i["feature"] in settings.TEST_MODULES]
-        interfaces.extend(swagger_interfaces)
-    except Exception as e:
-        print(f"[Prefetch] swagger 解析失败，仅用 pipeline 配置: {e}")
-
-    return prefetch_module_data(http_client, interfaces, settings.DEFAULT_PLATFORM)
+from core.redaction import redact_sensitive
 
 
 def _pipeline_test_id(cfg: PipelineConfig) -> str:
@@ -82,21 +27,34 @@ def _pipeline_test_id(cfg: PipelineConfig) -> str:
     "pipeline",
     [pytest.param(cfg, id=_pipeline_test_id(cfg)) for cfg in load_all_pipelines()],
 )
-def test_pipeline(pipeline, http_client, prefetch_cache):
+def test_pipeline(pipeline, http_client):
     """执行单个业务流程冒烟测试"""
-    result: PipelineResult = run_pipeline(pipeline, http_client, prefetch_cache)
+    variables = {"platform": settings.DEFAULT_PLATFORM}
+    result: PipelineResult = run_pipeline(pipeline, http_client, variables)
+
+    allure.dynamic.feature(pipeline.module)
+    allure.dynamic.story("query-pipeline")
+    allure.dynamic.title(pipeline.name)
 
     # 附件：完整流程结果摘要
     summary = {
         "pipeline": pipeline.name,
         "module": pipeline.module,
         "success": result.success,
+        "duration_ms": result.duration_ms,
+        "error_type": result.error_type,
         "steps": [
             {
                 "name": r.step_name,
+                "method": r.method,
+                "endpoint": r.endpoint,
                 "success": r.success,
+                "status_code": r.status_code,
+                "duration_ms": r.duration_ms,
+                "error_type": r.error_type,
                 "error": r.error,
-                "extracted": r.extracted,
+                "request_params": r.request_params,
+                "extracted": redact_sensitive(r.extracted),
             }
             for r in result.step_results
         ],

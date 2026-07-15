@@ -6,6 +6,8 @@ allure-report.html
 __pycache__/
 *.pyc
 *.pyo
+.venv/
+.test-tmp/
 
 # IDE
 .vscode/

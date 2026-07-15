@@ -11,6 +11,10 @@ SIDE_EFFECT_GET_BLACKLIST: set[str] = {
     "/api/Complaint/RemoveComplaintType",            # 删除投诉类型，会删数据
 }
 
+# 少数后端可能使用 POST 实现纯查询；必须经过人工确认后显式加入。
+# 第一阶段保持为空，确保 CI/CD 门禁只运行 GET。
+SAFE_QUERY_POST_WHITELIST: set[str] = set()
+
 # 各模块查询接口白名单
 # key: 模块名, value: 允许测试的 endpoint 集合
 MODULE_WHITELISTS: dict[str, set[str]] = {

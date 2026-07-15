@@ -7,7 +7,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from core.pipeline_executor import (
+    FieldExtractionError,
     PipelineResult,
+    ReferenceResolutionError,
     StepResult,
     _extract_fields,
     _get_by_path,
@@ -72,12 +74,17 @@ class TestExtractFields:
         extract_map = {"id": "id", "name": "name"}
         assert _extract_fields(resp, extract_map) == {"id": 1, "name": "x"}
 
-    def test_extract_missing_returns_empty(self):
+    def test_extract_missing_fails(self):
         resp = {"result": {}}
-        assert _extract_fields(resp, {"x": "missing"}) == {}
+        with pytest.raises(FieldExtractionError, match="x <- missing"):
+            _extract_fields(resp, {"x": "missing"})
 
 
 class TestResolveParams:
+    def test_resolve_runtime_variable(self):
+        params = {"Platform": "$var.platform"}
+        assert _resolve_params(params, {}, {"platform": "MyEhi"}) == {"Platform": "MyEhi"}
+
     def test_resolve_cache_ref(self):
         cache = {"id": 52}
         params = {"id": "$cache.id", "Platform": "MyEhi"}
@@ -90,12 +97,11 @@ class TestResolveParams:
         result = _resolve_params(params, context, {})
         assert result == {"id": 100}
 
-    def test_missing_ref_dropped(self):
-        """引用未命中的参数被丢弃（不传 None）"""
+    def test_missing_ref_fails(self):
+        """引用未命中时禁止发送缺少关键参数的请求。"""
         params = {"id": "$ref.unknown.field", "Platform": "MyEhi"}
-        result = _resolve_params(params, {}, {})
-        assert "id" not in result
-        assert result == {"Platform": "MyEhi"}
+        with pytest.raises(ReferenceResolutionError, match="参数 id"):
+            _resolve_params(params, {}, {})
 
     def test_non_ref_values_preserved(self):
         params = {"Platform": "MyEhi", "SkipCount": 0, "MaxResultCount": 10}
@@ -126,6 +132,9 @@ class TestRunPipeline:
         assert result.success is True
         assert len(result.step_results) == 1
         assert result.step_results[0].success is True
+        assert result.step_results[0].status_code == 200
+        assert result.step_results[0].endpoint == "/api/Test/Get"
+        assert result.step_results[0].duration_ms >= 0
 
     def test_multi_step_with_ref(self):
         """多步骤流程，步骤2引用步骤1提取的值"""
@@ -134,11 +143,13 @@ class TestRunPipeline:
         mock_client.get.side_effect = [
             self._make_mock_response(json_data={
                 "isSuccess": True,
+                "errorCode": 0,
                 "result": {"items": [{"id": 42, "name": "test"}]}
             }),
             # 步骤2: 详情查询
             self._make_mock_response(json_data={
                 "isSuccess": True,
+                "errorCode": 0,
                 "result": {"id": 42}
             }),
         ]
@@ -188,6 +199,7 @@ class TestRunPipeline:
         assert result.success is False
         assert len(result.step_results) == 1  # 只执行了第一步
         assert "500" in result.error
+        assert result.error_type == "http_status"
 
     def test_is_success_mismatch_fails(self):
         """isSuccess 不匹配 → 失败"""
@@ -215,4 +227,33 @@ class TestRunPipeline:
         )
         result = run_pipeline(pipeline, mock_client, {})
         assert result.success is False
-        assert "执行异常" in result.error
+        assert "网络请求失败" in result.error
+        assert result.error_type == "network"
+
+    def test_missing_runtime_variable_does_not_send_request(self):
+        mock_client = MagicMock()
+        pipeline = PipelineConfig(
+            name="test",
+            module="Test",
+            steps=[StepConfig(name="s1", endpoint="/api/Test/Get", params={"Platform": "$var.platform"})],
+        )
+        result = run_pipeline(pipeline, mock_client, {})
+        assert result.success is False
+        assert "引用未命中" in result.error
+        assert result.error_type == "reference"
+        mock_client.get.assert_not_called()
+
+    def test_missing_extract_field_fails_pipeline(self):
+        mock_client = MagicMock()
+        mock_client.get.return_value = self._make_mock_response(
+            json_data={"isSuccess": True, "errorCode": 0, "result": {}}
+        )
+        pipeline = PipelineConfig(
+            name="test",
+            module="Test",
+            steps=[StepConfig(name="s1", endpoint="/api/Test/Get", extract={"id": "result.id"})],
+        )
+        result = run_pipeline(pipeline, mock_client, {})
+        assert result.success is False
+        assert "提取字段失败" in result.error
+        assert result.error_type == "extraction"

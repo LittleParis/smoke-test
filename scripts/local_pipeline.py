@@ -47,6 +47,7 @@ def main():
     parser.add_argument("--branch", default="local-test", help="模拟分支名")
     parser.add_argument("--trigger", default="Manual", help="模拟触发原因")
     args = parser.parse_args()
+    python_cmd = f'"{sys.executable}"'
 
     print("=" * 60)
     print("  本地 CI/CD Pipeline 模拟")
@@ -56,20 +57,20 @@ def main():
     exit_code = 0
 
     # Step 1: Install dependencies
-    rc = run("pip install -r requirements.txt -q", "Install dependencies")
+    rc = run(f"{python_cmd} -m pip install -r requirements.txt -q", "Install dependencies")
     if rc != 0:
         exit_code = 1
 
-    # Step 2: Run smoke tests
+    # Step 2: Run YAML gate smoke tests
     if not args.skip_test:
-        rc = run("pytest tests/test_smoke.py -v --tb=short", "Run smoke tests")
+        rc = run(f"{python_cmd} -m pytest tests/test_pipeline.py -v --tb=short", "Run pipeline smoke tests")
         if rc != 0:
             exit_code = 1
     else:
         print("\n[SKIP] Run smoke tests (using existing allure-results)")
 
     # Step 3: Generate HTML report
-    rc = run("python generate_report.py allure-report.html", "Generate HTML report")
+    rc = run(f"{python_cmd} generate_report.py allure-report.html", "Generate HTML report")
     if rc != 0:
         exit_code = 1
 
@@ -78,7 +79,7 @@ def main():
     print("[STEP] WeCom notification")
     print(f"{'='*60}")
     notify_cmd = (
-        f"python scripts/notify_wecom.py"
+        f"{python_cmd} scripts/notify_wecom.py"
         f" --results allure-results"
         f" --branch {args.branch}"
         f" --trigger {args.trigger}"
