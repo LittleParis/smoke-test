@@ -35,6 +35,7 @@ class StepConfig:
     method: str = "GET"
     step_type: str = "detail"          # list | detail | aggregation
     params: dict[str, Any] = field(default_factory=dict)
+    body: dict[str, Any] = field(default_factory=dict)      # POST 请求体（JSON）
     extract: dict[str, str] = field(default_factory=dict)  # {上下文键: 响应字段路径}
     expect: StepExpect = field(default_factory=StepExpect)
 
@@ -134,6 +135,9 @@ def load_pipeline(filepath: Path) -> PipelineConfig:
         extract = s.get("extract") or {}
         if not isinstance(params, dict):
             _validation_error(filepath, f"{location}.params 必须是对象")
+        body = s.get("body") or {}
+        if not isinstance(body, dict):
+            _validation_error(filepath, f"{location}.body 必须是对象")
         if not isinstance(extract, dict) or not all(
             isinstance(key, str) and key and isinstance(path, str) and path
             for key, path in extract.items()
@@ -181,6 +185,7 @@ def load_pipeline(filepath: Path) -> PipelineConfig:
             method=method.upper(),
             step_type=step_type,
             params=params,
+            body=body,
             extract=extract,
             expect=expect,
         ))
@@ -237,6 +242,9 @@ def _validate_step_references(filepath: Path, steps: list[StepConfig]) -> None:
         references = [
             (f"参数 {name}", value)
             for name, value in step.params.items()
+        ] + [
+            (f"请求体 {name}", value)
+            for name, value in step.body.items()
         ] + [
             (f"断言 {path}", value)
             for path, value in step.expect.equals.items()

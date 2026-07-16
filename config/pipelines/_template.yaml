@@ -1,0 +1,92 @@
+# 业务流程冒烟测试模板
+#
+# 使用说明：
+# 1. 复制本文件，重命名为 <你的业务名>.yaml
+# 2. 修改下方带 ← 标记的字段
+# 3. 设置 enabled: true 启用
+# 4. 运行 pytest tests/test_pipeline.py -v 自动执行
+#
+# 文件放本目录即可，框架会自动扫描所有 *.yaml 文件
+
+version: 1
+name: 业务流程名称               # ← 改成你的流程名（中文/英文均可）
+module: YourModule               # ← 改成模块名（英文，如 Order/Vehicle/Customer）
+enabled: false                   # ← 改成 true 启用；false 时跳过不执行
+tags: [gate, query]              # 标签，可选
+
+steps:
+  # ============================================
+  # 步骤1: 列表查询（提取 ID 供后续步骤使用）
+  # ============================================
+  - name: query_list             # ← 步骤名，唯一，后续 $ref 引用用
+    endpoint: /api/XXX/GetXXXList   # ← 改成你的列表接口路径
+    method: GET                  # ← GET 或 POST
+    type: list                   # list | detail | aggregation
+    params:                      # ← 改成你的接口参数
+      Platform: $var.platform    # $var.platform 会自动替换为 .env 里的 TEST_PLATFORM
+      SkipCount: 0
+      MaxResultCount: 10
+    extract:                     # ← 从响应提取字段，供后续步骤引用
+      biz_id: result.items.0.id  # ← 改成你要提取的字段路径
+    expect:
+      status: 200
+      equals:
+        isSuccess: true          # 响应体 isSuccess 字段必须为 true
+        errorCode: 0             # 响应体 errorCode 字段必须为 0
+      not_empty:                 # 这些路径的值不能为空
+        - result.items
+
+  # ============================================
+  # 步骤2: 详情查询（引用步骤1提取的 ID）
+  # ============================================
+  - name: query_detail
+    endpoint: /api/XXX/GetXXXInfo   # ← 改成你的详情接口路径
+    method: GET
+    type: detail
+    params:
+      Platform: $var.platform
+      id: $ref.query_list.biz_id  # ← $ref.<步骤名>.<提取的字段名>
+    expect:
+      status: 200
+      equals:
+        isSuccess: true
+        errorCode: 0
+        result.id: $ref.query_list.biz_id   # ← 断言响应字段 == 引用值
+
+  # ============================================
+  # 步骤3（可选）: 更多接口...
+  # ============================================
+  # - name: query_other
+  #   endpoint: /api/XXX/GetOther
+  #   method: GET
+  #   params:
+  #     id: $ref.query_list.biz_id
+  #   expect:
+  #     status: 200
+  #     equals:
+  #       isSuccess: true
+
+
+# ============================================
+# 字段速查
+# ============================================
+#
+# $var.platform        引用 .env 中的 TEST_PLATFORM 值
+# $ref.<step>.<key>    引用前序步骤 extract 提取的值
+#
+# extract 路径格式:
+#   result.items.0.id        点号风格（推荐）
+#   result.items[0].id       括号风格
+#   id                       简写（自动尝试 result.id 再尝试 id）
+#
+# expect 断言:
+#   status: 200              HTTP 状态码
+#   equals:                  响应字段等于指定值
+#     isSuccess: true
+#     errorCode: 0
+#     result.id: $ref.xxx    支持引用值
+#   not_empty:               响应字段非空
+#     - result.items
+#
+# 单接口测试（不需要编排）:
+#   只写一个 step，不写 extract，params 直接填具体值即可

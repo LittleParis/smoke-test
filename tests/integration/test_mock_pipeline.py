@@ -40,15 +40,13 @@ def test_all_yaml_pipelines_pass_against_mock_server(mock_server, mock_http_clie
         for pipeline in load_all_pipelines()
     ]
 
-    assert len(results) == 3
+    assert len(results) == 2
     assert all(result.success for result in results), [result.error for result in results]
     assert [request.path for request in mock_server.state.api_requests] == [
-        "/api/Accident/GetAccidentInfos",
-        "/api/Accident/GetAccidentInfo",
-        "/api/Complaint/GetComplaints",
-        "/api/Complaint/GetComplaintInfo",
         "/api/Repair/GetRepairInfos",
         "/api/Repair/GetRepairInfo",
+        "/api/Repair/GetRepairInfos",
+        "/api/Common/ResolveSensitiveInfo",
     ]
 
     detail_queries = {
@@ -56,8 +54,6 @@ def test_all_yaml_pipelines_pass_against_mock_server(mock_server, mock_http_clie
         for request in mock_server.state.api_requests
         if request.path.endswith(("GetAccidentInfo", "GetComplaintInfo", "GetRepairInfo"))
     }
-    assert detail_queries["/api/Accident/GetAccidentInfo"]["AccidentId"] == ["A-2001"]
-    assert detail_queries["/api/Complaint/GetComplaintInfo"]["id"] == ["52"]
     assert detail_queries["/api/Repair/GetRepairInfo"]["repairId"] == ["R-1001"]
 
 

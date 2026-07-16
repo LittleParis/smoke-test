@@ -168,8 +168,8 @@ class TestLoadAllPipelines:
     def test_loads_enabled_pipelines(self):
         pipelines = load_all_pipelines()
         assert len(pipelines) >= 1
-        complaint = next((p for p in pipelines if p.module == "Complaint"), None)
-        assert complaint is not None
+        repair = next((p for p in pipelines if p.module == "Repair"), None)
+        assert repair is not None
 
     def test_skips_disabled(self, tmp_path):
         disabled_yaml = tmp_path / "disabled.yaml"

@@ -148,16 +148,22 @@ def _run_step(
     try:
         # 解析参数引用
         params = _resolve_params(step.params, context, variables)
-        result.request_params = redact_sensitive(params)
+        body = _resolve_body(step.body, context, variables) if step.body else {}
+        result.request_params = redact_sensitive(
+            {"params": params, "body": body} if body else params
+        )
 
         allure.dynamic.feature(module)
         allure.dynamic.title(f"{pipeline_step_title(step)}")
 
         with allure.step(f"{step.method} {step.endpoint}"):
-            response = execute_case(http_client, step.method, step.endpoint, params)
+            response = execute_case(http_client, step.method, step.endpoint, params, body or None)
 
         allure.attach(
-            json.dumps(redact_sensitive(params), ensure_ascii=False),
+            json.dumps(
+                redact_sensitive({"params": params, "body": body} if body else params),
+                ensure_ascii=False,
+            ),
             name="请求参数",
             attachment_type=allure.attachment_type.JSON,
         )
@@ -238,6 +244,39 @@ def _resolve_params(
             raise ReferenceResolutionError(f"参数 {name} 的引用未命中: {value}")
         resolved[name] = value
     return resolved
+
+
+def _resolve_body(
+    body: dict[str, Any],
+    context: dict[str, dict[str, Any]],
+    variables: dict[str, Any],
+) -> dict[str, Any]:
+    """递归解析请求体中的引用（$var / $ref / $cache），支持嵌套 dict 和 list。
+
+    body 常含数组结构（如 Ids: [$ref.xxx]），需递归解析才能替换列表元素中的引用。
+    引用缺失时明确失败，禁止发送缺少关键参数的请求。
+    """
+    return _resolve_nested(body, context, variables)
+
+
+def _resolve_nested(
+    value: Any,
+    context: dict[str, dict[str, Any]],
+    variables: dict[str, Any],
+) -> Any:
+    if isinstance(value, dict):
+        return {k: _resolve_nested(v, context, variables) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_resolve_nested(item, context, variables) for item in value]
+    if isinstance(value, str):
+        resolved, hit = resolve_value(value, context, variables)
+        if hit and resolved is not None:
+            return resolved
+        is_reference = value.startswith(("$var.", "$ref.", "$cache."))
+        if is_reference:
+            raise ReferenceResolutionError(f"请求体引用未命中: {value}")
+        return value
+    return value
 
 
 def _extract_fields(response_json: dict, extract_map: dict[str, str]) -> dict[str, Any]:

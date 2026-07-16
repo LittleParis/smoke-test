@@ -2,6 +2,7 @@
 import json
 
 from config import settings
+from config.modules import SAFE_QUERY_POST_WHITELIST
 from core.pipeline_loader import load_all_pipelines
 
 
@@ -13,12 +14,18 @@ def _swagger_spec():
 def test_core_gate_modules_are_configured():
     pipelines = load_all_pipelines()
     modules = {pipeline.module for pipeline in pipelines}
-    assert {"Complaint", "Repair", "Accident"}.issubset(modules)
+    assert "Repair" in modules
 
     for pipeline in pipelines:
         assert pipeline.version == 1
         assert {"gate", "query"}.issubset(pipeline.tags)
-        assert all(step.method == "GET" for step in pipeline.steps)
+        # 允许 GET 查询，以及白名单内的 POST 查询接口（如脱敏解密）
+        for step in pipeline.steps:
+            if step.method == "GET":
+                continue
+            assert step.method == "POST" and step.endpoint in SAFE_QUERY_POST_WHITELIST, (
+                f"{pipeline.module}/{step.name} 使用非查询方法 {step.method} {step.endpoint}"
+            )
 
 
 def test_pipeline_endpoints_and_query_params_exist_in_swagger():

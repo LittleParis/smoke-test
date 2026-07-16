@@ -77,17 +77,22 @@ def _create_handler(state: MockServerState) -> type[BaseHTTPRequestHandler]:
                 return
 
             if parsed.path.startswith("/api/"):
-                self._handle_api(parsed.path, parse_qs(parsed.query))
+                self._handle_api("GET", parsed.path, parse_qs(parsed.query))
                 return
 
             self._send_json(404, {"isSuccess": False, "errorCode": 404, "message": "Not found"})
 
         def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
             parsed = urlparse(self.path)
-            if parsed.path != "/Account/Login":
-                self._send_json(404, {"isSuccess": False, "errorCode": 404, "message": "Not found"})
+            if parsed.path == "/Account/Login":
+                self._handle_login()
                 return
+            if parsed.path.startswith("/api/"):
+                self._handle_api("POST", parsed.path, parse_qs(parsed.query))
+                return
+            self._send_json(404, {"isSuccess": False, "errorCode": 404, "message": "Not found"})
 
+        def _handle_login(self) -> None:
             length = int(self.headers.get("Content-Length", "0"))
             form = parse_qs(self.rfile.read(length).decode("utf-8"))
             valid = (
@@ -105,8 +110,8 @@ def _create_handler(state: MockServerState) -> type[BaseHTTPRequestHandler]:
             self.send_header("Content-Length", "0")
             self.end_headers()
 
-        def _handle_api(self, path: str, query: dict[str, list[str]]) -> None:
-            state.api_requests.append(RecordedRequest(method="GET", path=path, query=query))
+        def _handle_api(self, method: str, path: str, query: dict[str, list[str]]) -> None:
+            state.api_requests.append(RecordedRequest(method=method, path=path, query=query))
 
             if "mock_session=authenticated" not in self.headers.get("Cookie", ""):
                 self._send_json(401, {"isSuccess": False, "errorCode": 401, "message": "Unauthorized"})
@@ -157,10 +162,20 @@ def _api_response(path: str, query: dict[str, list[str]]) -> dict[str, Any] | No
         return {**common, "result": {"id": complaint_id, "selfOrderNo": "MOCK-C-001"}}
 
     if path == "/api/Repair/GetRepairInfos":
-        return {**common, "result": {"items": [{"repairId": "R-1001", "carNo": "沪A00001"}], "totalCount": 1}}
+        return {**common, "result": {"items": [{
+            "repairId": "R-1001",
+            "orderNo": "MOCK-ORDER-001",
+            "carNo": "沪A00001",
+            "acctId": "MOCK-ACCT-001",
+            "extraProperties": {"OrderNo": {"encryptedContent": "MOCK-ENCRYPTED"}},
+        }], "totalCount": 1}}
     if path == "/api/Repair/GetRepairInfo":
         repair_id = _query_value(query, "repairId")
         return {**common, "result": {"repairId": repair_id, "carNo": "沪A00001"}}
+
+    # POST 解密脱敏字段：返回固定明文（mock 不做真实解密）
+    if path == "/api/Common/ResolveSensitiveInfo":
+        return {**common, "result": "MOCK-DECRYPTED-ORDER-NO"}
 
     if path == "/api/Accident/GetAccidentInfos":
         return {**common, "result": {"items": [{"accidentId": "A-2001", "carNo": "沪A00002"}], "totalCount": 1}}

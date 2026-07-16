@@ -1,0 +1,78 @@
+# 维修单精确查询冒烟：按 RepairId 查询维修单信息
+#
+# 与 repair.yaml（通用列表->详情）不同，本流程按指定 RepairId 精确查询。
+# 参数须用 PascalCase 以匹配 Swagger 契约；timestamp 非接口参数，不写入。
+#
+# 后续步骤用 $ref.query_by_id.repair_id 等引用本步骤提取的值。
+
+version: 1
+name: 维修单精确查询冒烟
+module: Repair
+enabled: true
+tags: [gate, query]
+
+steps:
+  # ============================================
+  # 步骤1: 按 RepairId 查询维修单信息
+  # ============================================
+  - name: query_by_id
+    endpoint: /api/Repair/GetRepairInfos
+    method: GET
+    type: list
+    params:
+      Platform: $var.platform        # 从 .env 读取 TEST_PLATFORM
+      RepairId: "202606290003286"    # ← 指定维修单号
+      SkipCount: 0
+      MaxResultCount: 15
+    extract:                         # 从响应提取字段，供后续步骤引用
+      repair_id: result.items.0.repairId
+      order_no: result.items.0.orderNo                 # 脱敏值（326***2209）
+      order_no_encrypted: result.items.0.extraProperties.OrderNo.encryptedContent   # 加密串，供步骤2解密
+      car_no: result.items.0.carNo
+      acct_id: result.items.0.acctId
+    expect:
+      status: 200
+      equals:
+        isSuccess: true
+        errorCode: 0
+      not_empty:
+        - result.items
+        - result.items.0.repairId
+
+  # ============================================
+  # 步骤2: 解密订单号（用步骤1提取的加密串调 ResolveSensitiveInfo）
+  # ============================================
+  - name: resolve_order_no
+    endpoint: /api/Common/ResolveSensitiveInfo
+    method: POST
+    type: detail
+    params:
+      Platform: $var.platform
+    body:                                   # POST 请求体
+      info: $ref.query_by_id.order_no_encrypted   # 引用步骤1提取的加密串
+    extract:
+      order_no_decrypted: result            # 解密后的完整订单号（3260422209）
+    expect:
+      status: 200
+      equals:
+        isSuccess: true
+        errorCode: 0
+      not_empty:
+        - result
+
+  # ============================================
+  # 步骤3（待补充）: 用提取的 repair_id 做下一步操作
+  # ============================================
+  # - name: next_step
+  #   endpoint: /api/Repair/GetRepairInfo
+  #   method: GET
+  #   type: detail
+  #   params:
+  #     Platform: $var.platform
+  #     repairId: $ref.query_by_id.repair_id
+  #   expect:
+  #     status: 200
+  #     equals:
+  #       isSuccess: true
+  #       errorCode: 0
+  #       result.repairId: $ref.query_by_id.repair_id

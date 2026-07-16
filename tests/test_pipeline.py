@@ -8,6 +8,7 @@
     pytest tests/test_pipeline.py -k 投诉     # 只跑名称匹配的流程
 """
 import json
+from datetime import datetime
 
 import allure
 import pytest
@@ -29,7 +30,10 @@ def _pipeline_test_id(cfg: PipelineConfig) -> str:
 )
 def test_pipeline(pipeline, http_client):
     """执行单个业务流程冒烟测试"""
-    variables = {"platform": settings.DEFAULT_PLATFORM}
+    variables = {
+        "platform": settings.DEFAULT_PLATFORM,
+        "timestamp": datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
+    }
     result: PipelineResult = run_pipeline(pipeline, http_client, variables)
 
     allure.dynamic.feature(pipeline.module)
